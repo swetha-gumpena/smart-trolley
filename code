@@ -1,0 +1,222 @@
+#include<reg51.h>
+ 
+sbit rs=P3^2;             //Register Select(RS) pin of 16*2 lcd
+sbit rw=P3^3;             //Read/Write(RW) pin of 16*2 lcd
+sbit en=P3^4;             //Enable(E) pin of 16*2 lcd
+sbit output=P2^0;
+
+char count = 0;            // count = 0
+char input[12];            // character array of size 12 to store rfid number
+char ch;  
+
+ 
+void delay(unsigned int)  ;               //function for creating delay
+void cmdwrt(unsigned char);              //function for sending commands to 16*2 lcd display
+void datawrt(unsigned char);            //function for sending data to 16*2 lcd display
+char rxdata(void);                     //function for receiving a character through serial port of 8051 
+
+ 
+void main(void)
+ {
+   unsigned char cmd[]={0x38,0x01,0x06,0x0c,0x80}; 	 //16*2 lcd initialization commands
+	 unsigned char cmd1[]={0xC0};
+   char b[12]="080070CB893A";
+	 char c[12]="080068F1E475";
+   unsigned char msg[]={"SMART TROLLEY"};
+	 unsigned char item1[]={"Oreo Rs.20"};
+	 unsigned char item2[]={"Sugar Rs.60"};
+	 unsigned char person[]={"Welcome Alex"};
+	 unsigned char x[]={"Total: Rs."};
+	 unsigned char i;
+	 unsigned char d0,d1,d2;
+   unsigned char san1 = 0;
+	 unsigned char i1c=0;
+   unsigned char i2c=0;
+   unsigned char total=0; 
+	 
+   TMOD=0x20;                  //timer 1 , mode 2 , auto reload
+   SCON=0x50;                   //8bit data , 1 stop bit , REN enabled
+   TH1=0xfd;                  //timer value for 9600 bits per second(bps)
+   TR1=1;                     //start the timer
+ 
+ for(i=0;i<5;i++)     //send commands to 16*2 lcd display one command at a time
+ {
+     cmdwrt(cmd[i]);       //function call to send commands to 16*2 lcd display
+     delay(1);
+ }
+ 
+ for(i=0;i<13;i++)             //send data to 16*2 lcd display one character at a time
+ {
+     datawrt(msg[i]);         //function call to display message on 16*2 lcd display
+     delay(1);
+ }
+
+ while(1)
+ {
+	 unsigned char j=0;
+	 unsigned char k=0;
+    count=0;
+      for(count=0;count<12;count++)                //repeat for 12 times
+      {
+          input[count]=rxdata(); //receive serial data and store it.
+          if (b[count]==input[count]) 
+					{						
+						j++;
+					}
+				  if (c[count]==input[count])
+					{
+						k++;
+					}
+			}
+	
+			
+			  for(i=0;i<5;i++)     //send commands to 16*2 lcd display one command at a time
+      {
+         cmdwrt(cmd[i]);       //function call to send commands to 16*2 lcd display
+         delay(1);
+      }
+			
+			
+			
+			if (j==12)
+				{	
+					i1c++;
+					if((i1c%2)==0)
+{ 
+	datawrt(45);                    //ASCII for minus
+	datawrt(32);                    //ASCII for space
+	total = (total - 20) ; 
+}
+else 
+{
+	datawrt(43);                      //ASCII for plus
+	datawrt(32);
+  total= (total + 20);
+}	
+				for(i=0;i<10;i++)                             
+         {
+            datawrt(item1[i]);                
+            delay(1);
+         }
+
+		 
+				 
+		cmdwrt(cmd1);       //function call to send commands to 16*2 lcd display
+    delay(1);
+    cmdwrt(0xC2);
+    for(i=0;i<10;i++)                             
+         {
+            datawrt(x[i]);                
+            delay(1);
+         }
+		san1 = total / 10 ;
+    d0 = (total % 10) + 48 ;
+    d1 = (san1 % 10) + 48 ;
+    d2 = (san1 / 10) + 48 ;
+				 delay(1);
+    datawrt(d2);
+				 delay(1);
+    datawrt(d1);
+				 delay(1);
+    datawrt(d0);
+				}	
+				
+				
+				
+		 else if (k==12)
+				{	
+					i2c++;
+					if((i2c%2)==0)
+{ 
+  datawrt(45);
+	datawrt(32);
+	total = (total - 60) ; 
+}
+else 
+{
+	datawrt(43);
+	datawrt(32);
+total= (total + 60);
+}	
+
+				for(i=0;i<11;i++)                             
+         {
+            datawrt(item2[i]);                
+            delay(1);
+         }
+
+
+				 
+				 
+		cmdwrt(cmd1);       //function call to send commands to 16*2 lcd display
+     delay(1);
+cmdwrt(0xC2);
+for(i=0;i<10;i++)                             
+         {
+            datawrt(x[i]);                
+            delay(1);
+         }
+		san1 = total / 10 ;
+    d0 = (total % 10) + 48 ;
+    d1 = (san1 % 10) + 48 ;
+    d2 = (san1 / 10) + 48 ;
+				 delay(1);
+ datawrt(d2);
+				 delay(1);
+ datawrt(d1);
+				 delay(1);
+ datawrt(d0);
+				}
+				
+				else
+				{
+					for(i=0;i<12;i++)                             
+         {
+            datawrt(person[i]);                
+            delay(1);
+         }
+				}	
+         delay(100);
+ 
+}
+ }
+ 
+void cmdwrt (unsigned char x)
+{ 
+   P2=x;  //send the command to Port 2 on which 16*2 lcd is connected
+   rs=0;  //make RS = 0 for command, read only
+   rw=0;  //make RW = 0 for write operation
+   en=1;  //send a HIGH to LOW pulse on Enable(E) pin to start commandwrite operation 
+   delay(1);
+   en=0;
+}
+ 
+void datawrt (unsigned char y)
+{ 
+   P2=y; //send the data to Port 2 on which 16*2 lcd is connected
+   rs=1; //make RS = 1 for command, read and write
+   rw=0; //make RW = 0 for write operation
+   en=1; //send a HIGH to LOW pulse on Enable(E) pin to start datawrite operation
+   delay(1);
+   en=0;
+}
+ 
+char rxdata()
+{
+  while(RI==0);   //wait till RI becomes HIGH
+  RI=0;           //make RI low
+  ch=SBUF;      //copy received data 
+  return ch;      //return the received data to main function.
+}
+
+ 
+void delay(unsigned int z)
+{
+  unsigned int p,q;
+  for(p=0;p<z;p++)    //repeat for 'z' times
+  {
+    for(q=0;q<1375;q++)		//repeat for 1375 times
+		{
+		}
+  }
+}
